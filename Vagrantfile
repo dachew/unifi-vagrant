@@ -22,7 +22,26 @@ Vagrant.configure("2") do |config|
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
-  config.vm.network "forwarded_port", guest: 8443, host: 8443
+  #
+  # Controller interface
+  config.vm.network "forwarded_port", guest: 8443, host: 8443, protocol: "tcp"
+  # TCP port for UAP to inform controller
+  config.vm.network "forwarded_port", guest: 8080, host: 8080, protocol: "tcp"
+  # throughput measurement
+  config.vm.network "forwarded_port", guest: 6789, host: 6789, protocol: "tcp"
+  # local-bound TCP port for DB server
+  config.vm.network "forwarded_port", guest: 27117, host: 27117, protocol: "tcp"
+  # UDP port used for STUN v4.5.2+
+  config.vm.network "forwarded_port", guest: 3478, host: 3478, protocol: "udp"
+  # UDP AP-EDU broadcasts
+  for i in 5656..5699
+  	config.vm.network "forwarded_port", guest: i, host: i, protocol: "udp"
+  end
+  # redirectors for wireless & wired clients
+  config.vm.network "forwarded_port", guest: 8881, host: 8881, protocol: "tcp"
+  config.vm.network "forwarded_port", guest: 8882, host: 8882, protocol: "tcp"
+  # AP Discovery
+  config.vm.network "forwarded_port", guest: 10001, host: 10001, protocol: "udp"
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
@@ -31,7 +50,7 @@ Vagrant.configure("2") do |config|
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  # config.vm.network "public_network"
+  #config.vm.network "public_network"
 
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
@@ -64,8 +83,13 @@ Vagrant.configure("2") do |config|
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   apt-get update
-  #   apt-get install -y apache2
-  # SHELL
+  config.vm.provision "shell", inline: <<-SHELL
+    set -e
+
+    # From https://help.ubnt.com/hc/en-us/articles/220066768-UniFi-How-to-Install-Update-via-APT-on-Debian-or-Ubuntu
+    echo "deb http://www.ubnt.com/downloads/unifi/debian stable ubiquiti" > /etc/apt/sources.list.d/ubiquiti.list
+    apt-key adv --keyserver keyserver.ubuntu.com --recv 06E85760C0A52C50
+    apt update
+	apt install -y unifi
+   SHELL
 end
